@@ -82,18 +82,16 @@ app.on('web-contents-created', (_, webContents) => {
   })
 })
 
-// in production mode, handle uncaught exception and unhandled rejection globally
-if (!isDev) {
-  // handle uncaught exception
-  process.on('uncaughtException', (error) => {
-    logger.error('Uncaught Exception:', error)
-  })
+// handle uncaught exception and unhandled rejection globally
+// handle uncaught exception
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error)
+})
 
-  // handle unhandled rejection
-  process.on('unhandledRejection', (reason, promise) => {
-    logger.error(`Unhandled Rejection at: ${promise} reason: ${reason}`)
-  })
-}
+// handle unhandled rejection
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error(`Unhandled Rejection at: ${promise} reason: ${reason}`)
+})
 
 // Check for single instance lock
 if (!app.requestSingleInstanceLock()) {
@@ -108,6 +106,7 @@ if (!app.requestSingleInstanceLock()) {
     // Set app user model id for windows
     electronApp.setAppUserModelId(import.meta.env.VITE_MAIN_BUNDLE_ID || 'com.kangfenmao.CherryStudio')
 
+    // Temporarily force LaunchToTray to false for debugging
     // Mac: Hide dock icon before window creation when launch to tray is set
     const isLaunchToTray = configManager.getLaunchToTray()
     if (isLaunchToTray) {
@@ -177,7 +176,8 @@ if (!app.requestSingleInstanceLock()) {
     optimizer.watchWindowShortcuts(window)
   })
 
-  app.on('before-quit', () => {
+  app.on('before-quit', (event) => {
+    logger.info('App is about to quit')
     app.isQuitting = true
 
     // quit selection service

@@ -84,8 +84,9 @@ export default defineConfig({
         '@mcp-trace/trace-web': resolve('packages/mcp-trace/trace-web')
       }
     },
+
     optimizeDeps: {
-      exclude: ['pyodide'],
+      exclude: ['pyodide', '@tryfabric/martian'],
       esbuildOptions: {
         target: 'esnext' // for dev
       }

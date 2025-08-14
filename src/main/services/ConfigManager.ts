@@ -56,11 +56,19 @@ export class ConfigManager {
   }
 
   getLaunchToTray(): boolean {
-    return !!this.get(ConfigKeys.LaunchToTray, false)
+    const value = !!this.get(ConfigKeys.LaunchToTray, false)
+    console.log(`[ConfigManager] LaunchToTray value: ${value}`)
+    return value
   }
 
   setLaunchToTray(value: boolean) {
+    console.log(`[ConfigManager] Setting LaunchToTray to: ${value}`)
     this.set(ConfigKeys.LaunchToTray, value)
+  }
+
+  resetLaunchToTray() {
+    console.log(`[ConfigManager] Resetting LaunchToTray to false`)
+    this.set(ConfigKeys.LaunchToTray, false)
   }
 
   getTray(): boolean {

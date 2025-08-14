@@ -38,6 +38,55 @@
     </div>
     <script>
       console.time('init')
+      // Define global objects for Node.js modules (safe version)
+      try {
+        if (typeof process === 'undefined') {
+          Object.defineProperty(window, 'process', {
+            value: {
+              env: {},
+              platform: 'browser',
+              arch: 'x64',
+              version: 'v18.0.0',
+              versions: { node: '18.0.0' }
+            },
+            writable: false,
+            configurable: true
+          })
+        }
+      } catch (e) {
+        // Ignore if process is already defined
+      }
+
+      try {
+        if (typeof global === 'undefined') {
+          Object.defineProperty(window, 'global', {
+            value: window,
+            writable: false,
+            configurable: true
+          })
+        }
+      } catch (e) {
+        // Ignore if global is already defined
+      }
+
+      try {
+        if (typeof Buffer === 'undefined') {
+          Object.defineProperty(window, 'Buffer', {
+            value: {
+              from: function (data) {
+                return new Uint8Array(data)
+              },
+              isBuffer: function () {
+                return false
+              }
+            },
+            writable: false,
+            configurable: true
+          })
+        }
+      } catch (e) {
+        // Ignore if Buffer is already defined
+      }
     </script>
     <script type="module" src="/src/init.ts"></script>
     <script type="module" src="/src/entryPoint.tsx"></script>

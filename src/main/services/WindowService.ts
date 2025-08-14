@@ -246,6 +246,19 @@ export class WindowService {
   }
 
   private setupWebContentsHandlers(mainWindow: BrowserWindow) {
+    // Add error handling for renderer process
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      logger.error(`Failed to load: ${validatedURL}, Error: ${errorCode} - ${errorDescription}`)
+    })
+
+    mainWindow.webContents.on('crashed', (event, killed) => {
+      logger.error(`Renderer process crashed, killed: ${killed}`)
+    })
+
+    mainWindow.webContents.on('did-finish-load', () => {
+      logger.info('Main window finished loading')
+    })
+
     mainWindow.webContents.on('will-navigate', (event, url) => {
       if (url.includes('localhost:5173')) {
         return
@@ -314,12 +327,29 @@ export class WindowService {
   }
 
   private loadMainWindowContent(mainWindow: BrowserWindow) {
+    logger.info('Loading main window content...')
+
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      logger.info(`Loading URL: ${process.env['ELECTRON_RENDERER_URL']}`)
       mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-      // mainWindow.webContents.openDevTools()
+      mainWindow.webContents.openDevTools()
     } else {
-      mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+      const htmlPath = join(__dirname, '../renderer/index.html')
+      logger.info(`Loading file: ${htmlPath}`)
+      mainWindow.loadFile(htmlPath)
     }
+
+    mainWindow.webContents.once('did-finish-load', () => {
+      logger.info('Main window finished loading')
+    })
+
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      logger.error(`Main window failed to load: ${errorCode} - ${errorDescription}`)
+    })
+
+    mainWindow.webContents.on('crashed', (event, killed) => {
+      logger.error(`Main window crashed: killed=${killed}`)
+    })
   }
 
   public getMainWindow(): BrowserWindow | null {
@@ -328,6 +358,8 @@ export class WindowService {
 
   private setupWindowLifecycleEvents(mainWindow: BrowserWindow) {
     mainWindow.on('close', (event) => {
+      logger.info('Main window close event triggered')
+
       // save data before when close window
       try {
         mainWindow.webContents.send(IpcChannel.App_SaveData)
@@ -337,6 +369,7 @@ export class WindowService {
 
       // 如果已经触发退出，直接退出
       if (app.isQuitting) {
+        logger.info('App is quitting, allowing window to close')
         return app.quit()
       }
 
@@ -375,6 +408,7 @@ export class WindowService {
     })
 
     mainWindow.on('closed', () => {
+      logger.info('Main window closed')
       this.mainWindow = null
     })
 

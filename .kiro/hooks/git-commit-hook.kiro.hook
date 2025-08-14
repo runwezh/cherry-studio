@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "name": "Git Commit Assistant",
+  "description": "Analyzes current git diff, generates appropriate commit messages by use \"chinese\", and executes git commit automatically",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/**/*",
+      "packages/**/*",
+      "scripts/**/*",
+      "docs/**/*",
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx",
+      "*.json",
+      "*.md",
+      "*.yml",
+      "*.yaml"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Please analyze the current git diff and generate an appropriate commit message following conventional commit format. Then execute the git commit with the generated message. Steps:\n\n1. Run `git diff --cached` to see staged changes (if no staged changes, run `git add .` first)\n2. Analyze the changes and determine the type (feat, fix, docs, style, refactor, test, chore, etc.)\n3. Generate a clear, concise commit message in format: `type(scope): description`\n4. Execute `git commit -m \"your generated message\"`\n\nFocus on:\n- Identifying the main purpose of the changes\n- Using appropriate conventional commit types\n- Keeping the message under 72 characters for the first line\n- Including scope when relevant (e.g., components, services, docs)\n- Being descriptive but concise"
+  }
+}

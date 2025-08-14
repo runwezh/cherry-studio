@@ -413,6 +413,14 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
+    // Expose process object for Node.js modules that need it
+    contextBridge.exposeInMainWorld('process', {
+      env: process.env,
+      platform: process.platform,
+      arch: process.arch,
+      version: process.version,
+      versions: process.versions
+    })
   } catch (error) {
     // eslint-disable-next-line no-restricted-syntax
     console.error('[Preload]Failed to expose APIs:', error as Error)
@@ -422,6 +430,14 @@ if (process.contextIsolated) {
   window.electron = electronAPI
   // @ts-ignore (define in dts)
   window.api = api
+  // @ts-ignore (define in dts)
+  window.process = {
+    env: process.env,
+    platform: process.platform,
+    arch: process.arch,
+    version: process.version,
+    versions: process.versions
+  }
 }
 
 export type WindowApiType = typeof api
