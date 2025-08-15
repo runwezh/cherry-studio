@@ -247,12 +247,12 @@ export class WindowService {
 
   private setupWebContentsHandlers(mainWindow: BrowserWindow) {
     // Add error handling for renderer process
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
       logger.error(`Failed to load: ${validatedURL}, Error: ${errorCode} - ${errorDescription}`)
     })
 
-    mainWindow.webContents.on('crashed', (event, killed) => {
-      logger.error(`Renderer process crashed, killed: ${killed}`)
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      logger.error(`Renderer process gone, reason: ${details.reason}, exitCode: ${details.exitCode}`)
     })
 
     mainWindow.webContents.on('did-finish-load', () => {
@@ -343,12 +343,12 @@ export class WindowService {
       logger.info('Main window finished loading')
     })
 
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
       logger.error(`Main window failed to load: ${errorCode} - ${errorDescription}`)
     })
 
-    mainWindow.webContents.on('crashed', (event, killed) => {
-      logger.error(`Main window crashed: killed=${killed}`)
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      logger.error(`Main window process gone, reason: ${details.reason}, exitCode: ${details.exitCode}`)
     })
   }
 

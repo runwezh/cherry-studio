@@ -321,8 +321,8 @@ const PopupContainer: React.FC<Props> = ({ providerId, resolve }) => {
             { label: t('models.type.function_calling'), key: 'function_calling' }
           ]}
           onChange={(key) => {
-            setOptimisticFilterTypeFn(key)
             startFilterTypeTransition(() => {
+              setOptimisticFilterTypeFn(key)
               setActualFilterType(key)
             })
           }}

@@ -176,7 +176,7 @@ if (!app.requestSingleInstanceLock()) {
     optimizer.watchWindowShortcuts(window)
   })
 
-  app.on('before-quit', (event) => {
+  app.on('before-quit', () => {
     logger.info('App is about to quit')
     app.isQuitting = true
 

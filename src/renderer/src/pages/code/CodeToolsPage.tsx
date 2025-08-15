@@ -53,21 +53,14 @@ const CodeToolsPage: FC = () => {
     // 不再清空模型选择，因为每个工具都会记住自己的模型
   }
 
-  const openAiProviders = providers.filter((p) => p.type.includes('openai'))
-  const geminiProviders = providers.filter((p) => p.type === 'gemini')
-  const claudeProviders = providers.filter((p) => p.type === 'anthropic')
-
+  // 移除限制性过滤，让用户自由选择所有可用的模型
   const modelPredicate = useCallback(
     (m: Model) => !isEmbeddingModel(m) && !isRerankModel(m) && !isTextToImageModel(m),
     []
   )
 
-  const availableProviders =
-    selectedCliTool === 'claude-code'
-      ? claudeProviders
-      : selectedCliTool === 'gemini-cli'
-        ? geminiProviders
-        : openAiProviders
+  // 使用所有启用的 providers，不做类型限制
+  const availableProviders = providers
 
   // 处理模型选择
   const handleModelChange = (value: string) => {

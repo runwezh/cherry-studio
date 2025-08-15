@@ -154,7 +154,9 @@ class CodeToolsService {
         logger.info(`${packageName} latest version: ${latestVersion}`)
 
         // Cache the result
-        this.versionCache.set(cacheKey, { version: latestVersion, timestamp: now })
+        if (latestVersion) {
+          this.versionCache.set(cacheKey, { version: latestVersion, timestamp: now })
+        }
         logger.debug(`Cached latest version for ${packageName}`)
       } catch (error) {
         logger.warn(`Failed to get latest version for ${packageName}:`, error as Error)
