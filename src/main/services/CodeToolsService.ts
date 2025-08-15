@@ -1,15 +1,15 @@
+import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { promisify } from 'node:util'
 
 import { loggerService } from '@logger'
 import { removeEnvProxy } from '@main/utils'
 import { isUserInChina } from '@main/utils/ipService'
 import { getBinaryName } from '@main/utils/process'
-import { spawn } from 'child_process'
-import { promisify } from 'util'
 
-const execAsync = promisify(require('child_process').exec)
+const execAsync = promisify(require('node:child_process').exec)
 const logger = loggerService.withContext('CodeToolsService')
 
 interface VersionInfo {
@@ -21,6 +21,40 @@ interface VersionInfo {
 class CodeToolsService {
   private versionCache: Map<string, { version: string; timestamp: number }> = new Map()
   private readonly CACHE_DURATION = 1000 * 60 * 30 // 30 minutes cache
+
+  /**
+   * Check if an application is available on macOS
+   */
+  private async isAppAvailable(appName: string): Promise<boolean> {
+    try {
+      await execAsync(`osascript -e "tell application \\"${appName}\\" to get version"`, { timeout: 3000 })
+      return true
+    } catch (error) {
+      return false
+    }
+  }
+
+  /**
+   * Get the preferred terminal application for macOS
+   * Priority: iTerm2 > Terminal.app
+   */
+  private async getPreferredMacTerminal(): Promise<{ app: string; displayName: string }> {
+    const terminals = [
+      { app: 'iTerm', displayName: 'iTerm2' },
+      { app: 'Terminal', displayName: 'Terminal.app' }
+    ]
+
+    for (const terminal of terminals) {
+      if (await this.isAppAvailable(terminal.app)) {
+        logger.info(`Found ${terminal.displayName}, using it for terminal launch`)
+        return terminal
+      }
+    }
+
+    // Fallback to Terminal.app (should always be available on macOS)
+    logger.warn('No preferred terminal found, falling back to Terminal.app')
+    return { app: 'Terminal', displayName: 'Terminal.app' }
+  }
 
   constructor() {
     this.getBunPath = this.getBunPath.bind(this)
@@ -120,7 +154,7 @@ class CodeToolsService {
         logger.info(`${packageName} latest version: ${latestVersion}`)
 
         // Cache the result
-        this.versionCache.set(cacheKey, { version: latestVersion!, timestamp: now })
+        this.versionCache.set(cacheKey, { version: latestVersion, timestamp: now })
         logger.debug(`Cached latest version for ${packageName}`)
       } catch (error) {
         logger.warn(`Failed to get latest version for ${packageName}:`, error as Error)
@@ -153,10 +187,9 @@ class CodeToolsService {
       if (inChina) {
         logger.info('User in China, using Taobao npm mirror')
         return 'https://registry.npmmirror.com'
-      } else {
-        logger.info('User not in China, using default npm mirror')
-        return 'https://registry.npmjs.org'
       }
+      logger.info('User not in China, using default npm mirror')
+      return 'https://registry.npmjs.org'
     } catch (error) {
       logger.warn('Failed to detect user location, using default npm mirror')
       return 'https://registry.npmjs.org'
@@ -216,8 +249,8 @@ class CodeToolsService {
     options: { autoUpdateToLatest?: boolean } = {}
   ) {
     logger.info(`Starting CLI tool launch: ${cliTool} in directory: ${directory}`)
-    logger.debug(`Environment variables:`, Object.keys(env))
-    logger.debug(`Options:`, options)
+    logger.debug('Environment variables:', Object.keys(env))
+    logger.debug('Options:', options)
 
     const packageName = await this.getPackageName(cliTool)
     const bunPath = await this.getBunPath()
@@ -274,12 +307,11 @@ class CodeToolsService {
         return Object.entries(env)
           .map(([key, value]) => `set "${key}=${value.replace(/"/g, '\\"')}"`)
           .join(' && ')
-      } else {
-        // Unix-like systems use export command
-        return Object.entries(env)
-          .map(([key, value]) => `export ${key}="${value.replace(/"/g, '\\"')}"`)
-          .join(' && ')
       }
+      // Unix-like systems use export command
+      return Object.entries(env)
+        .map(([key, value]) => `export ${key}="${value.replace(/"/g, '\\"')}"`)
+        .join(' && ')
     }
 
     // Build command to execute
@@ -306,18 +338,39 @@ class CodeToolsService {
 
     switch (platform) {
       case 'darwin': {
-        // macOS - Use osascript to launch terminal and execute command directly, without showing startup command
+        // macOS - Use preferred terminal (iTerm2 > Terminal.app)
         const envPrefix = buildEnvPrefix(false)
         const command = envPrefix ? `${envPrefix} && ${baseCommand}` : baseCommand
+        const escapedDirectory = directory.replace(/'/g, "\\'")
+        const escapedCommand = command.replace(/"/g, '\\"')
 
         terminalCommand = 'osascript'
-        terminalArgs = [
-          '-e',
-          `tell application "Terminal"
+
+        // Get the preferred terminal application
+        const terminal = await this.getPreferredMacTerminal()
+
+        if (terminal.app === 'iTerm') {
+          // Use iTerm2
+          terminalArgs = [
+            '-e',
+            `tell application "iTerm"
   activate
-  do script "cd '${directory.replace(/'/g, "\\'")}' && clear && ${command.replace(/"/g, '\\"')}"
+  create window with default profile
+  tell current session of current window
+    write text "cd '${escapedDirectory}' && clear && ${escapedCommand}"
+  end tell
 end tell`
-        ]
+          ]
+        } else {
+          // Use Terminal.app
+          terminalArgs = [
+            '-e',
+            `tell application "Terminal"
+  activate
+  do script "cd '${escapedDirectory}' && clear && ${escapedCommand}"
+end tell`
+          ]
+        }
         break
       }
       case 'win32': {
@@ -441,7 +494,7 @@ end tell`
     // Launch terminal process
     try {
       logger.info(`Launching terminal with command: ${terminalCommand}`)
-      logger.debug(`Terminal arguments:`, terminalArgs)
+      logger.debug('Terminal arguments:', terminalArgs)
       logger.debug(`Working directory: ${directory}`)
       logger.debug(`Process environment keys: ${Object.keys(processEnv)}`)
 
